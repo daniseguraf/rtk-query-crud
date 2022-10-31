@@ -1,6 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAddContactMutation } from "../services/contactsApi";
+import {
+  useAddContactMutation,
+  useGetContactQuery,
+  useUpdateContactMutation,
+} from "../services/contactsApi";
 import { toast } from "react-toastify";
 import "./AddEdit.css";
 
@@ -13,9 +17,27 @@ const initialValue = {
 const AddEdit = () => {
   const [formValue, setFormValue] = useState(initialValue);
   const { name, email, contact } = formValue;
+  const [editMode, setEditMode] = useState(false);
+
   const navigate = useNavigate();
-  const params = useParams();
+  const { id } = useParams();
+
   const [addContact] = useAddContactMutation();
+  const [updateContact] = useUpdateContactMutation();
+
+  const { data } = useGetContactQuery(id!);
+
+  useEffect(() => {
+    if (id) {
+      setEditMode(true);
+      if (data) {
+        setFormValue({ ...data });
+      }
+    } else {
+      setEditMode(false);
+      setFormValue({ ...initialValue });
+    }
+  }, [id, data]);
 
   const handleInputChange = (e: any) => {
     setFormValue({
@@ -29,6 +51,14 @@ const AddEdit = () => {
 
     if (!name || !email || !contact) {
       toast.error("Please provide all the fields");
+      return;
+    }
+
+    if (editMode) {
+      await updateContact(formValue);
+      navigate("/");
+      setEditMode(false);
+      toast.success("Success");
       return;
     }
 
@@ -83,7 +113,7 @@ const AddEdit = () => {
             onChange={handleInputChange}
           />
         </div>
-        <input type="submit" value="Add" />
+        <input type="submit" value={editMode ? "Edit" : "Add"} />
       </form>
     </div>
   );
